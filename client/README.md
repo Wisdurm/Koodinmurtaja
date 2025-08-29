@@ -1,4 +1,4 @@
-![band](/image.gif)
+![band](/client/image.gif)
 
 Svelte client for the game
 
