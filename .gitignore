@@ -1,2 +1,5 @@
 /server/build/
 /server/CMakeUserPresets.json
+
+node_modules
+.svelte-kit
