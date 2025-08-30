@@ -45,5 +45,8 @@
 	},
 	"keywords": [
 		"svelte"
-	]
+	],
+	"dependencies": {
+		"@formkit/auto-animate": "^0.8.4"
+	}
 }
