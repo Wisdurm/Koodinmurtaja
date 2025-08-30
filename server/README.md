@@ -1,3 +1,10 @@
+# Api
+This is a list of messages the client (player) can send the server:  
+Message|Meaning
+-|-
+J\<roomcode>:\<name>| Connects the current websocket connection to the specified room, with a specified name. 
+
+
 # Compiling
 First make sure Git and Ninja are installed.  
 ```sudo apt install git ninja-build```  
@@ -30,6 +37,3 @@ Then finally, compile the program with:
 ```cmake --build build```  
 
 todo: copied straight from WisdomSite, check if still applies :grin:
-
-# Api
-TODO

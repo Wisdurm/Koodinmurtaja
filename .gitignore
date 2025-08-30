@@ -1,4 +1,7 @@
+# Server side things
 /server/build/
+.vscode/
+build/
 /server/CMakeUserPresets.json
 
 node_modules

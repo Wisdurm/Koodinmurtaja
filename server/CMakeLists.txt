@@ -1,5 +1,6 @@
 # Config
 cmake_minimum_required( VERSION 3.21 )
+add_compile_options(-std=c++20)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Project
@@ -7,6 +8,7 @@ project(Koodinmurtaja)
 
 add_executable(Koodinmurtaja 
 src/main.cpp
+src/room.cpp
 )
 # Dependencies
 
