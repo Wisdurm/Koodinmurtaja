@@ -100,13 +100,13 @@
     <!-- omat -->
     <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-center">
         <div>{own.name}</div>
-        <div class="grid grid-cols-5 gap-1">
+        <ul class="grid grid-cols-5 gap-1" use:autoAnimate>
             {#each own.cards as card (getCardKey(card))}
-                <div class="w-14 h-24 bg-gray-500 flex flex-col items-center justify-center text-xs">
+                <li class="w-14 h-24 bg-gray-500 flex flex-col items-center justify-center text-xs">
                     <div>{getCardValue(card)}</div>
                     <div class="text-xs">{getCardSuit(card)}</div>
-                </div>
+                </li>
             {/each}
-        </div>
+        </ul>
     </div>
 </main>
