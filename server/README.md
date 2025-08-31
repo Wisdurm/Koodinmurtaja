@@ -13,6 +13,9 @@
 ### Events
 
 #### `join_request` → `join_response`
+
+Connects the current websocket connection to the specified room, with a specified name. 
+
 ```json
 // Request
 {"event": "join_request", "data": {"name": "<player_name>", "code": "<room_code>"}}
@@ -40,6 +43,9 @@
 ```
 
 #### `start_request` → `start_response`
+
+Indicates the player is ready for the game to start
+
 ```json
 // Request
 {"event": "start_request"}
@@ -59,6 +65,9 @@
 ```
 
 #### Server Events
+
+Informs clients that a specified player has left the room
+
 ```json
 // Player disconnection
 {"event": "player_left", "data": {"player": {"id": "<id_of_the_player_who_left>"}}}
