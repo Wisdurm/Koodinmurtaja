@@ -81,14 +81,15 @@ Informs clients that a specified player has left the room
 
 ### Build
 
-**Setup**:
+**Setup**:  
 ```bash
 sudo apt install git ninja-build
 git clone https://github.com/microsoft/vcpkg.git
 cd vcpkg && ./bootstrap-vcpkg.sh  # Linux
 cd vcpkg && .\bootstrap-vcpkg.bat  # Windows
 ```
-
+For the next steps, clone this repository, and cd in to the ```server``` directory.  
+Create a file called ```CMakeUserPresets.json```, and paste the following.  
 **CMakeUserPresets.json**:
 ```json
 {
@@ -100,7 +101,6 @@ cd vcpkg && .\bootstrap-vcpkg.bat  # Windows
   }]
 }
 ```
-
 **Build**:
 ```bash
 cmake --preset=default
