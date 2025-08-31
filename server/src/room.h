@@ -1,8 +1,12 @@
+#pragma once
+
 #include "crow.h"
 #include <vector>
 #include <stack>
 #include <map>
 #include <cmath>
+// Game
+#include "main.h"
 
 constexpr uint8_t CARD_PER_SUIT = 13;
 enum class Suits {DIAMOND, CLUB, HEART, SPADE};
@@ -51,7 +55,7 @@ class Room
 {
 private:
 	// Vector which maps all users ids to a player object
-	std::vector<Player> users;
+	std::unordered_map<int, Player> users;
 	// The amount of suits in use in the current game
 	uint8_t suits;
 	// The draw pile
@@ -60,14 +64,20 @@ private:
 	int turn;
 	// Whether or not the game has started yet
 	bool gameStarted;
+	// Whether or not players are ready for the game to start
+	std::vector<bool> readyStates;
+	// Counter which ticks up, assigning new ids
+	int idCounter;
 public:
 	Room(int suits);
 	// Adds player to room
 	void AddPlayer(crow::websocket::connection* conn, std::string name);
 	// Returns the most recently added player's  id
-	int getId();
+	int getId() {return --idCounter;};
 	// Retrieves the list of players
-	const std::vector<Player>& getPlayers() {return users; };
+	std::vector<Player> getPlayers();
+	// Retrieves the list of player ready states
+	std::vector<bool>& getReadyStates() {return readyStates; };
 	// Whether or not the game has started yet
 	bool gameOn() {return gameStarted; };
 	// Removes a player by their websocket connection

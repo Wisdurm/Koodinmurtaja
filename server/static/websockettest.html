@@ -13,6 +13,8 @@
         Send
     </button><BR>
     
+    <button onclick="Ready()">Ready</button>
+
     <textarea id="log" cols=100 rows=50>
     </textarea>
     <script>
@@ -37,6 +39,11 @@ function joinRoom()
     room = document.getElementById("room").value
     name = document.getElementById("name").value
     sock.send(`{ "event": "join_request", "data": { "name": "${name}", "code": "${room}" } }`);
+}
+
+function Ready()
+{
+    sock.send('{  "event": "start_request"}  ')
 }
 
 </script>

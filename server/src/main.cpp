@@ -7,23 +7,38 @@
 #include <nlohmann/json.hpp>
 // Game
 #include "room.h"
+#include "main.h"
 
 using namespace nlohmann;
+
+// Dictionary which contains every room, with their roomcode being their key
+static std::unordered_map<std::string, Room> rooms;
+// Dictionary which maps every active websocket connection to the room they're in
+static std::unordered_map<crow::websocket::connection*, Room*> userConnections;
+// Dictionary which maps websocket connections to their player
+static std::unordered_map<crow::websocket::connection*, Player*> userPlayers;
+// Dictionary which maps event strings to their int representations
+static std::unordered_map<std::string, int> reqMap = {
+    {"join_request", 0},
+    {"start_request", 1},
+};
+
+// Maps a websocket connection against a player
+void mapPlayer(crow::websocket::connection* conn, Player* player)
+{
+    userPlayers.insert({conn, player});
+}
+// Unmaps a websocket connection from a player
+void unmapPlayer(crow::websocket::connection* conn)
+{
+    userPlayers.erase(conn);
+}
 
 int main()
 {
     crow::SimpleApp app;
 
     std::mutex mtx;
-    // Dictionary which contains every room, with their roomcode being their key
-    std::unordered_map<std::string, Room> rooms;
-    // Dictionary which maps every active websocket connection to the room they're in
-    std::unordered_map<crow::websocket::connection*, Room*> userConnections;
-    // Dictionary which maps event strings to their int representations
-    std::unordered_map<std::string, int> reqMap = {
-        {"join_request", 0},
-    };
-
     // Default room for debugging
     rooms.insert({"TEST", Room(3)});
 
@@ -38,12 +53,28 @@ int main()
           //REMOVE PLAYER
           if (userConnections.find(&conn) != userConnections.end()) // If player is in a room
           {
-            CROW_LOG_INFO << "Player: " << conn.get_remote_ip() << " left room ";
-            userConnections[&conn]->removePlayer(&conn);
+            // Get some info
+            Room& room = *userConnections.at(&conn);
+            int playerId = userPlayers.at(&conn)->getId();
+            CROW_LOG_INFO << "Player: " << playerId << " left room";
+            // Eject player
+            userConnections[&conn]->removePlayer(&conn); // This handless userPlayers as well
             userConnections.erase(&conn);
+            // Inform other players
+            json report =
+            {
+                {"event", "player_left"},
+                {"data",{
+                    {"player",{
+                        {"id", playerId},
+                    }}
+                }}
+            };
+            for (Player& player : room.getPlayers())
+            {
+                player.sendMessage(report.dump());
+            }
           }
-          
-
       })
       .onmessage([&](crow::websocket::connection& conn, const std::string& data, bool is_binary) {
           std::lock_guard<std::mutex> _(mtx);
@@ -115,6 +146,7 @@ int main()
                     Room& room = rooms.at(code);
                     room.AddPlayer(&conn, name);
                     userConnections.insert({&conn, &room});
+                    int playerId = userPlayers[&conn]->getId(); // Could use room.getId() here :/
                     // Return success message
                     json players;
                     json success =
@@ -122,12 +154,13 @@ int main()
                         {"event", "join_response"},
                         {"success", true},
                         {"data",{
-                            {"id", room.getId()},
+                            {"id", playerId},
                             {"name", name},
-                            {"game_on", room.gameOn() }
                         }}
                     };
-                    for (Player player : room.getPlayers())
+                    // Generate list of all currently connected players
+                    auto listPlayers = room.getPlayers();
+                    for (Player& player : listPlayers)
                     {
                         players.push_back(
                             {
@@ -138,22 +171,20 @@ int main()
                     success["data"]["players"] = players;
                     conn.send_text(success.dump());
                     // Inform other players of the connection
-                    for (Player player : room.getPlayers())
+                    json report =
                     {
-                        if (player.getId() != room.getId()) // Tell everyone except the new user
+                        {"event", "player_joined"},
+                        {"data", {
+                            {"player", {
+                                {"id", playerId},
+                                {"name", name}
+                            }},
+                        }}
+                    };
+                    for (Player& player : listPlayers)
+                    {
+                        if (player.getId() != playerId) // Tell everyone except the new user
                         {
-                            json report =
-                            {
-                                {"event", "player_joined"},
-                                {"data", {
-                                    {"player", {
-                                        {"id", room.getId()},
-                                        {"name", name}
-                                    }},
-                                    {"game_on", room.gameOn()},
-                                    {"players", players}
-                                }}
-                            };
                             player.sendMessage(report.dump());
                         }
                     }
@@ -176,8 +207,41 @@ int main()
                 
                 break;
             }
+          case 1: // Player indicates they are ready 
+            {
+                Player& readier = *userPlayers[&conn];
+                userConnections[&conn]->getReadyStates().at(readier.getId()) = true;
+                json success =
+                    {
+                        {"event", "start_response"},
+                        {"success", true}
+                    };
+                conn.send_text(success.dump());
+                // Tell other players
+                Room& room = *userConnections[&conn];
+                json report =
+                    {
+                        {"event", "player_readied"},
+                        {"data", {
+                            {"player", {
+                                {"id", readier.getId()},
+                                {"name", readier.getName()}
+                            }},
+                        }}
+                    };
+                for (Player& player : room.getPlayers())
+                {
+                    if (player.getId() != readier.getId()) // Tell everyone except the player who readied
+                    {
+                        player.sendMessage(report.dump());
+                    }
+                }
+                break;
+            }
           default:
-            break;
+            {
+                break;
+            }
           }
 
           /*

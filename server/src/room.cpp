@@ -23,6 +23,7 @@ void Player::sendMessage(std::string msg)
 
 Room::Room(int suits) : suits(suits)
 {
+    idCounter = 0;
     gameStarted = false;
     turn = 0;
     // Create deck
@@ -31,15 +32,19 @@ Room::Room(int suits) : suits(suits)
 
 void Room::AddPlayer(crow::websocket::connection* conn, std::string name)
 {
-    users.push_back(Player(name, cards, conn, users.size()));
+    users.insert({idCounter, Player(name, cards, conn, idCounter)});
+    idCounter++;
+    readyStates.push_back(false);
+    mapPlayer(conn, &(users.at(idCounter-1)));
 }
 	
 void Room::removePlayer(crow::websocket::connection* conn)
 {
-    std::vector<Player>::iterator it = users.begin();
+    unmapPlayer(conn);
+    std::unordered_map<int, Player>::iterator it = users.begin();
     while (it != users.end())
     {
-        if ((*it).getConnection() == conn)
+        if (it->second.getConnection() == conn)
         {
             it = users.erase(it); // Kind of useless since we break out anyway...
             break;
@@ -49,8 +54,12 @@ void Room::removePlayer(crow::websocket::connection* conn)
     }
 }
 
-
-int Room::getId()
+std::vector<Player> Room::getPlayers()
 {
-    return users.size()-1;
+    std::vector<Player> players;
+    for (auto pair : users)
+    {
+        players.push_back(pair.second);
+    }
+    return players;
 }
