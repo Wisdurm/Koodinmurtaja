@@ -15,8 +15,11 @@ int main()
     crow::SimpleApp app;
 
     std::mutex mtx;
+    // Dictionary which contains every room, with their roomcode being their key
     std::unordered_map<std::string, Room> rooms;
+    // Dictionary which maps every active websocket connection to the room they're in
     std::unordered_map<crow::websocket::connection*, Room*> userConnections;
+    // Dictionary which maps event strings to their int representations
     std::unordered_map<std::string, int> reqMap = {
         {"join_request", 0},
     };
@@ -32,6 +35,15 @@ int main()
       .onclose([&](crow::websocket::connection& conn, const std::string& reason) {
           CROW_LOG_INFO << "websocket connection closed: " << reason;
           std::lock_guard<std::mutex> _(mtx);
+          //REMOVE PLAYER
+          if (userConnections.find(&conn) != userConnections.end()) // If player is in a room
+          {
+            CROW_LOG_INFO << "Player: " << conn.get_remote_ip() << " left room ";
+            userConnections[&conn]->removePlayer(&conn);
+            userConnections.erase(&conn);
+          }
+          
+
       })
       .onmessage([&](crow::websocket::connection& conn, const std::string& data, bool is_binary) {
           std::lock_guard<std::mutex> _(mtx);
@@ -48,7 +60,7 @@ int main()
                 {"event", "join_response"},
                 {"success", false},
                 {"error",{
-                    {"code", "Json error"},
+                    {"code", "JSON_ERROR"},
                     {"msg", "Unable to parse JSON request"}
                 }}
             };
@@ -67,7 +79,7 @@ int main()
                         {"event", "join_response"},
                         {"success", false},
                         {"error",{
-                            {"code", "Occupied"},
+                            {"code", "OCCUPED"},
                             {"msg", "Player is already in another room"}
                         }}
                     };
@@ -89,16 +101,16 @@ int main()
                         {"event", "join_response"},
                         {"success", false},
                         {"error",{
-                            {"code", "Param error"},
+                            {"code", "PARAM_ERROR"},
                             {"msg", "Unable to find necessary JSON params"}
                         }}
                     };
                     conn.send_text(error.dump());
                     return;
                 }
-                CROW_LOG_INFO << "Player: " << name << " joining room: " << code;
                 if (rooms.find(code) != rooms.end()) // Room exists
                 {
+                    CROW_LOG_INFO << "Player: " << name << " joined room: " << code;
                     // Add player to room
                     Room& room = rooms.at(code);
                     room.AddPlayer(&conn, name);
@@ -154,7 +166,7 @@ int main()
                         {"event", "join_response"},
                         {"success", false},
                         {"error",{
-                            {"code", "Room missing"},
+                            {"code", "ROOM_MISSING"},
                             {"msg", "Unable to find room"}
                         }}
                     };

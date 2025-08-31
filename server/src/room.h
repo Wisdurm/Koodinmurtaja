@@ -42,6 +42,8 @@ public:
 	std::string& getName() { return name; }
 	// Send the player a message
 	void sendMessage(std::string msg);
+	// Returns the connection of the player
+	crow::websocket::connection* getConnection() {return connection;};
 };
 
 // Room which hosts a game
@@ -68,5 +70,7 @@ public:
 	const std::vector<Player>& getPlayers() {return users; };
 	// Whether or not the game has started yet
 	bool gameOn() {return gameStarted; };
+	// Removes a player by their websocket connection
+	void removePlayer(crow::websocket::connection* conn);
 };
 

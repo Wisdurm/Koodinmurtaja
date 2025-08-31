@@ -33,6 +33,22 @@ void Room::AddPlayer(crow::websocket::connection* conn, std::string name)
 {
     users.push_back(Player(name, cards, conn, users.size()));
 }
+	
+void Room::removePlayer(crow::websocket::connection* conn)
+{
+    std::vector<Player>::iterator it = users.begin();
+    while (it != users.end())
+    {
+        if ((*it).getConnection() == conn)
+        {
+            it = users.erase(it); // Kind of useless since we break out anyway...
+            break;
+        }
+        else
+            ++it;
+    }
+}
+
 
 int Room::getId()
 {

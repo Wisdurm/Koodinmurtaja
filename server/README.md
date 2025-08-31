@@ -83,6 +83,13 @@ This is a list of messages the client (player) can send the server:
 </tr>
 </table>
 
+## Error codes
+Error code | Meaning
+-|-
+OCCUPIED | You are already connected to the room you are trying to connect to
+JSON_ERROR | JSON request is improperly formatted
+PARAM_ERROR | JSON request is missing parameters
+ROOM_MISSING | The room you are trying to connect to does not exist
 # Compiling
 First make sure Git and Ninja are installed.  
 ```sudo apt install git ninja-build```  
