@@ -1,9 +1,87 @@
 # Api
 This is a list of messages the client (player) can send the server:  
-Message|Meaning
--|-
-J\<roomcode>:\<name>| Connects the current websocket connection to the specified room, with a specified name. 
 
+<table>
+<tr>
+  <th>Message</th>
+  <th>Purpose</th>
+  <th>Response</th>
+</tr>
+<tr>
+  <th>
+  <code>
+  {  
+    "event": "join_request",  
+    "data": {  
+      "name": "player name",  
+      "code": "room code"  
+      }  
+    }  
+  }
+  </code>
+  </th>
+  <th>
+  Connects the current websocket connection to the specified room, with a specified name. 
+  </th>
+  <th>
+  On fail
+  <code>
+  {
+    "event": "join_response",
+    "success": false,
+    "error": {
+      "code": "Error code",
+      "msg": "Description of error"
+      }
+    }
+  }
+  </code><br>
+  On success<br>
+  <code>
+  {
+    "event": "join_response",
+    "success": true,
+    "data": {
+      "id": 1,
+      "name": "player name",
+      "players": [
+          {
+            "id": 2,
+            "name": "other player",
+          }
+        ],
+        "game_on": false 
+      }
+    }
+  }
+  </code><br>
+  To other players (on success)<br>
+  <code>
+  {
+    "event": "player_joined",
+    "data": {
+      "player": {
+        "id": 1,
+        "name": "player who joined",
+      },
+      "players": [
+          {
+            "id": 0,
+            "name": "players already present",
+          },
+          {
+            "id": 1,
+            "name": "player who joined",
+          }
+        ],
+        "game_on": false
+      }
+    }
+  }
+  </code>
+  </th>
+</tr>
+</table>
 
 # Compiling
 First make sure Git and Ninja are installed.  

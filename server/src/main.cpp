@@ -4,8 +4,11 @@
 #include <mutex>
 #include <memory>
 #include <iostream>
+#include <nlohmann/json.hpp>
 // Game
 #include "room.h"
+
+using namespace nlohmann;
 
 int main()
 {
@@ -14,6 +17,12 @@ int main()
     std::mutex mtx;
     std::unordered_map<std::string, Room> rooms;
     std::unordered_map<crow::websocket::connection*, Room*> userConnections;
+    std::unordered_map<std::string, int> reqMap = {
+        {"join_request", 0},
+    };
+
+    // Default room for debugging
+    rooms.insert({"TEST", Room(3)});
 
     CROW_WEBSOCKET_ROUTE(app, "/ws")
       .onopen([&](crow::websocket::connection& conn) {
@@ -26,23 +35,131 @@ int main()
       })
       .onmessage([&](crow::websocket::connection& conn, const std::string& data, bool is_binary) {
           std::lock_guard<std::mutex> _(mtx);
-
-          switch (data[0])
+          
+          json req;
+          try
           {
-          case 'J': // Player joins room 
+            req = json::parse(data);
+          }
+          catch (json::parse_error)
+          {
+            json error =
             {
-                int splice = data.find(':');
-                std::string code = data.substr(0, splice);
-                std::string name = data.substr(splice+1);
+                {"event", "join_response"},
+                {"success", false},
+                {"error",{
+                    {"code", "Json error"},
+                    {"msg", "Unable to parse JSON request"}
+                }}
+            };
+            conn.send_text(error.dump());
+            return;
+          }
+
+          switch (reqMap[req["event"].dump()])
+          {
+          case 0: // Player joins room 
+            {
+                if (userConnections.find(&conn) != userConnections.end())
+                {
+                    json error =
+                    {
+                        {"event", "join_response"},
+                        {"success", false},
+                        {"error",{
+                            {"code", "Occupied"},
+                            {"msg", "Player is already in another room"}
+                        }}
+                    };
+                    conn.send_text(error.dump());
+                    return;
+                }
+
+                std::string code;
+                std::string name;
+                try
+                {
+                    code = req["data"]["code"];
+                    name = req["data"]["name"];
+                }
+                catch(json::type_error)
+                {
+                    json error =
+                    {
+                        {"event", "join_response"},
+                        {"success", false},
+                        {"error",{
+                            {"code", "Param error"},
+                            {"msg", "Unable to find necessary JSON params"}
+                        }}
+                    };
+                    conn.send_text(error.dump());
+                    return;
+                }
                 CROW_LOG_INFO << "Player: " << name << " joining room: " << code;
                 if (rooms.find(code) != rooms.end()) // Room exists
                 {
-                    CROW_LOG_INFO << "Succesfully joined room!";
-                    rooms.at(code).AddPlayer(&conn, name);
+                    // Add player to room
+                    Room& room = rooms.at(code);
+                    room.AddPlayer(&conn, name);
+                    userConnections.insert({&conn, &room});
+                    // Return success message
+                    json players;
+                    json success =
+                    {
+                        {"event", "join_response"},
+                        {"success", true},
+                        {"data",{
+                            {"id", room.getId()},
+                            {"name", name},
+                            {"game_on", room.gameOn() }
+                        }}
+                    };
+                    for (Player player : room.getPlayers())
+                    {
+                        players.push_back(
+                            {
+                                {"id", player.getId()},
+                                {"name", player.getName()}
+                            });   
+                    }
+                    success["data"]["players"] = players;
+                    conn.send_text(success.dump());
+                    // Inform other players of the connection
+                    for (Player player : room.getPlayers())
+                    {
+                        if (player.getId() != room.getId()) // Tell everyone except the new user
+                        {
+                            json report =
+                            {
+                                {"event", "player_joined"},
+                                {"data", {
+                                    {"player", {
+                                        {"id", room.getId()},
+                                        {"name", name}
+                                    }},
+                                    {"game_on", room.gameOn()},
+                                    {"players", players}
+                                }}
+                            };
+                            player.sendMessage(report.dump());
+                        }
+                    }
+                    return;
                 }
                 else
                 {
-                    CROW_LOG_INFO << "Cannot find room";
+                    json error =
+                    {
+                        {"event", "join_response"},
+                        {"success", false},
+                        {"error",{
+                            {"code", "Room missing"},
+                            {"msg", "Unable to find room"}
+                        }}
+                    };
+                    conn.send_text(error.dump());
+                    return;
                 }
                 
                 break;

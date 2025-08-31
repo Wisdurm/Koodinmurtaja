@@ -17,6 +17,8 @@ src/room.cpp
 
 # find_package(ZLIB REQUIRED) # Not required since this almost purely uses websockets anyways
 
+find_package(nlohmann_json CONFIG REQUIRED)
+
 include(${CMAKE_SOURCE_DIR}/cmake/CPM.cmake)
 CPMAddPackage(Crow
   VERSION 1.2.1
@@ -36,4 +38,5 @@ target_link_libraries( Koodinmurtaja
   #OpenSSL::Crypto
   #ZLIB::ZLIB
   Crow::Crow
+  nlohmann_json::nlohmann_json
 )

@@ -36,7 +36,7 @@ function joinRoom()
 {
     room = document.getElementById("room").value
     name = document.getElementById("name").value
-    sock.send("J" + room + ":" + name);
+    sock.send(`{ "event": "join_request", "data": { "name": "${name}", "code": "${room}" } }`);
 }
 
 </script>

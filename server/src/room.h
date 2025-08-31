@@ -29,24 +29,44 @@ private:
 	uint8_t unguessedCards;
 	// Name of the player
 	std::string name;
+	// Websocket connection of the player
+	crow::websocket::connection* connection;
+	// Per room unique id
+	int id;
 public:
 	// Default constructor
-	Player(std::string name, std::stack<Card>& cards);
+	Player(std::string name, std::stack<Card>& cards, crow::websocket::connection* conn, int id);
+	// Returns id
+	int getId() { return id; };
+	// Returns name
+	std::string& getName() { return name; }
+	// Send the player a message
+	void sendMessage(std::string msg);
 };
 
 // Room which hosts a game
 class Room
 {
 private:
-	// Dictionary which maps all users connected to the room to a player object
-	std::map<crow::websocket::connection*, Player> users;
+	// Vector which maps all users ids to a player object
+	std::vector<Player> users;
 	// The amount of suits in use in the current game
 	uint8_t suits;
 	// The draw pile
 	std::stack<Card> cards;
+	// Which players turn it currently is
+	int turn;
+	// Whether or not the game has started yet
+	bool gameStarted;
 public:
 	Room(int suits);
 	// Adds player to room
 	void AddPlayer(crow::websocket::connection* conn, std::string name);
+	// Returns the most recently added player's  id
+	int getId();
+	// Retrieves the list of players
+	const std::vector<Player>& getPlayers() {return users; };
+	// Whether or not the game has started yet
+	bool gameOn() {return gameStarted; };
 };
 
