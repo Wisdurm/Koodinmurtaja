@@ -75,6 +75,7 @@ Informs clients that a specified player has left the room
 
 ### Error Codes
 - `OCCUPIED` - You are already connected to the room you are trying to connect to
+- `INTRUDER` - You are trying to send a request that would require you to be connected to a room, but you are not connected to any
 - `JSON_ERROR` - JSON request is improperly formatted  
 - `PARAM_ERROR` - JSON request is missing parameters
 - `ROOM_MISSING` - The room you are trying to connect to does not exist

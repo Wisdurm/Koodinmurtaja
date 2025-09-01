@@ -99,7 +99,23 @@ int main()
             return;
           }
 
-          switch (reqMap[req["event"].dump()])
+          json::iterator event = req.find("event");
+          if (event == req.end()) // Does message contain imporant "event" field
+          {
+              json error =
+              {
+                  {"event", "join_response"},
+                  {"success", false},
+                  {"error",{
+                      {"code", "PARAM_ERROR"},
+                      {"msg", "Unable to find necessary JSON params"}
+                  }}
+              };
+              conn.send_text(error.dump());
+              return;
+          }
+          // Switch based on event type
+          switch (reqMap.at(*event))
           {
           case 0: // Player joins room 
             {
@@ -139,58 +155,7 @@ int main()
                     conn.send_text(error.dump());
                     return;
                 }
-                if (rooms.find(code) != rooms.end()) // Room exists
-                {
-                    CROW_LOG_INFO << "Player: " << name << " joined room: " << code;
-                    // Add player to room
-                    Room& room = rooms.at(code);
-                    room.AddPlayer(&conn, name);
-                    userConnections.insert({&conn, &room});
-                    int playerId = userPlayers[&conn]->getId(); // Could use room.getId() here :/
-                    // Return success message
-                    json players;
-                    json success =
-                    {
-                        {"event", "join_response"},
-                        {"success", true},
-                        {"data",{
-                            {"id", playerId},
-                            {"name", name},
-                        }}
-                    };
-                    // Generate list of all currently connected players
-                    auto listPlayers = room.getPlayers();
-                    for (Player& player : listPlayers)
-                    {
-                        players.push_back(
-                            {
-                                {"id", player.getId()},
-                                {"name", player.getName()}
-                            });   
-                    }
-                    success["data"]["players"] = players;
-                    conn.send_text(success.dump());
-                    // Inform other players of the connection
-                    json report =
-                    {
-                        {"event", "player_joined"},
-                        {"data", {
-                            {"player", {
-                                {"id", playerId},
-                                {"name", name}
-                            }},
-                        }}
-                    };
-                    for (Player& player : listPlayers)
-                    {
-                        if (player.getId() != playerId) // Tell everyone except the new user
-                        {
-                            player.sendMessage(report.dump());
-                        }
-                    }
-                    return;
-                }
-                else
+                if (rooms.find(code) == rooms.end()) // Room does not exist
                 {
                     json error =
                     {
@@ -204,31 +169,99 @@ int main()
                     conn.send_text(error.dump());
                     return;
                 }
+                // Continue if everything is fine
+
+                CROW_LOG_INFO << "Player: " << name << " joined room: " << code;
+                // Add player to room
+                Room& room = rooms.at(code);
+                room.AddPlayer(&conn, name);
+                userConnections.insert({&conn, &room});
+                int playerId = userPlayers[&conn]->getId(); // Could use room.getId() here :/
+                // Return success message
+                json players;
+                json success =
+                {
+                    {"event", "join_response"},
+                    {"success", true},
+                    {"data",{
+                        {"id", playerId},
+                        {"name", name},
+                    }}
+                };
+                // Generate list of all currently connected players
+                auto listPlayers = room.getPlayers();
+                for (Player& player : listPlayers)
+                {
+                    players.push_back(
+                        {
+                            {"id", player.getId()},
+                            {"name", player.getName()}
+                        });   
+                }
+                success["data"]["players"] = players;
+                conn.send_text(success.dump());
+                // Inform other players of the connection
+                json report =
+                {
+                    {"event", "player_joined"},
+                    {"data", {
+                        {"player", {
+                            {"id", playerId},
+                            {"name", name}
+                        }},
+                    }}
+                };
+                for (Player& player : listPlayers)
+                {
+                    if (player.getId() != playerId) // Tell everyone except the new user
+                    {
+                        player.sendMessage(report.dump());
+                    }
+                }
+                return;
                 
                 break;
             }
           case 1: // Player indicates they are ready 
             {
-                Player& readier = *userPlayers[&conn];
-                userConnections[&conn]->getReadyStates().at(readier.getId()) = true;
-                json success =
+                // Check if player is connected
+                std::unordered_map<crow::websocket::connection*, Player*>::iterator userPlayer = userPlayers.find(&conn);
+                if (userPlayer == userPlayers.end()) // Connection does not map to a player
+                {
+                    json error =
                     {
                         {"event", "start_response"},
-                        {"success", true}
+                        {"success", false},
+                        {"error",{
+                            {"code", "INTRUDER"},
+                            {"msg", "Player is not in any room"}
+                        }}
                     };
+                    conn.send_text(error.dump());
+                    return;
+                }
+
+                // Continue if everything is fine
+                Player& readier = *userPlayer->second;
+                userConnections[&conn]->getReadyStates().at(readier.getId()) = true;
+                json success =
+                {
+                    {"event", "start_response"},
+                    {"success", true}
+                };
                 conn.send_text(success.dump());
                 // Tell other players
                 Room& room = *userConnections[&conn];
                 json report =
-                    {
-                        {"event", "player_readied"},
-                        {"data", {
-                            {"player", {
-                                {"id", readier.getId()},
-                                {"name", readier.getName()}
-                            }},
-                        }}
-                    };
+                {
+                    {"event", "player_readied"},
+                    {"data", {
+                        {"player", {
+                            {"id", readier.getId()},
+                            {"name", readier.getName()}
+                        }},
+                    }}
+                };
                 for (Player& player : room.getPlayers())
                 {
                     if (player.getId() != readier.getId()) // Tell everyone except the player who readied
@@ -236,6 +269,7 @@ int main()
                         player.sendMessage(report.dump());
                     }
                 }
+
                 break;
             }
           default:

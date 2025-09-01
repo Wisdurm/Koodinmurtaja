@@ -1,8 +1,11 @@
 # Server side things
 /server/build/
+ # Nämä rotat yritti hiipiä mukaan
 .vscode/
+.vs/
 build/
 /server/CMakeUserPresets.json
 
+# Client side things
 node_modules
 .svelte-kit
