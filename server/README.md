@@ -91,7 +91,7 @@ Informs clients that the game has started
       {"id": 0, "name": "<other_player>"},
       {"id": 1, "name": "<other_player>"}
     ],
-    "turn" : turnNumber
+    "turn" : 0
   }
 }
 ```
