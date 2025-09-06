@@ -2,7 +2,6 @@
 
 #include "crow.h"
 #include <vector>
-#include <stack>
 #include <map>
 #include <cmath>
 #include <nlohmann/json.hpp>
@@ -47,7 +46,7 @@ private:
 	int id;
 public:
 	// Default constructor
-	Player(std::string name, std::stack<Card>& cards, crow::websocket::connection* conn, int id);
+	Player(std::string name, std::vector<Card>& cards, crow::websocket::connection* conn, int id);
 	// Returns id
 	int getId() const { return id; };
 	// Returns name
@@ -73,7 +72,7 @@ private:
 	// The amount of suits in use in the current game
 	uint8_t suits;
 	// The draw pile
-	std::stack<Card> cards;
+	std::vector<Card> cards;
 	// Which players turn it currently is
 	int turn;
 	// Whether or not the game has started yet

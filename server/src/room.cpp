@@ -12,13 +12,13 @@ bool Card::guess(uint8_t value)
     return guessed;
 }
 	
-Player::Player(std::string name, std::stack<Card>& cards, crow::websocket::connection* conn, int id) : name(name), connection(conn), id(id), unguessedCards(0)
+Player::Player(std::string name, std::vector<Card>& cards, crow::websocket::connection* conn, int id) : name(name), connection(conn), id(id), unguessedCards(0)
 {
     // Draw 5 cards
     for (int i = 0; i < 5; i++)
     {
-        this->cards.push_back(cards.top());
-        cards.pop();
+        this->cards.push_back(*cards.end());
+        cards.erase(cards.end());
         unguessedCards++;
     }
 };
@@ -54,7 +54,20 @@ Room::Room(int suits) : suits(suits)
     gameStarted = false;
     turn = INT_MAX;
     // Create deck
-    for (int i = 0; i < 52; i++) { cards.push(i);}
+    for (int i = 0; i < suits*CARD_PER_SUIT; i++)
+    {
+        cards.push_back(i);
+        //TODO this does not give the right amount of cards
+    }
+    // Shuffle (Fisher-Yates)
+    for (int i = cards.size() - 1; i >= 1; i--)
+    {
+        int j = std::rand() % i+1;
+        // Swap
+        Card temp = cards.at(j);
+        cards.at(j) = cards.at(i);
+        cards.at(i) = temp;
+    }
 }
 
 void Room::startGame()
