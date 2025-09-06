@@ -75,7 +75,7 @@ Informs clients that a specified player has left the room
 
 Informs clients that the game has started
 
-```
+```json
 // Game start
 {
   "event": "game_start", 
@@ -97,7 +97,7 @@ Informs clients that the game has started
 ```
 
 Informs a client that it is their turn, and tells them the cards they have, including any possibly newly drawn ones
-```
+```json
 // Your turn
 {
   "event": "your_turn"
