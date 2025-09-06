@@ -73,12 +73,55 @@ Informs clients that a specified player has left the room
 {"event": "player_left", "data": {"player": {"id": "<id_of_the_player_who_left>"}}}
 ```
 
+Informs clients that the game has started
+
+```
+// Game start
+{
+  "event": "game_start", 
+  "data": {
+    "cards" : [
+        {"card" : cardValue, "guessed" : false},
+        {"card" : cardValue, "guessed" : false},
+        {"card" : cardValue, "guessed" : false},
+        {"card" : cardValue, "guessed" : false},
+        {"card" : cardValue, "guessed" : false}
+    ],
+    "players": [
+      {"id": 0, "name": "<other_player>"},
+      {"id": 1, "name": "<other_player>"}
+    ],
+    "turn" : turnNumber
+  }
+}
+```
+
+Informs a client that it is their turn, and tells them the cards they have, including any possibly newly drawn ones
+```
+// Your turn
+{
+  "event": "your_turn"
+  "data": {
+    "cards" : [
+        {"card" : cardValue, "guessed" : false},
+        {"card" : cardValue, "guessed" : true},
+        {"card" : cardValue, "guessed" : false},
+        {"card" : cardValue, "guessed" : false},
+        {"card" : cardValue, "guessed" : false}
+    ],
+  }
+}
+```
+
 ### Error Codes
-- `OCCUPIED` - You are already connected to the room you are trying to connect to
-- `INTRUDER` - You are trying to send a request that would require you to be connected to a room, but you are not connected to any
-- `JSON_ERROR` - JSON request is improperly formatted  
-- `PARAM_ERROR` - JSON request is missing parameters
+- `IMPATIENT` - You are trying to send a request that would necessitate that it is your turn, however it is not
 - `ROOM_MISSING` - The room you are trying to connect to does not exist
+- `OCCUPIED` - You are already connected to the room you are trying to connect to
+- `LATE` - You are trying to send a request which expects you to not already be in game, but you are
+- `INTRUDER` - You are trying to send a request that would require you to be connected to a room, but you are not connected to any
+- `PARAM_ERROR` - JSON request is missing parameters
+- `JSON_ERROR` - JSON request is improperly formatted
+- `EVENT_ERROR` - The event specified in your request does not exist
 
 ### Build
 

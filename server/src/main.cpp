@@ -114,8 +114,25 @@ int main()
               conn.send_text(error.dump());
               return;
           }
+
+          std::unordered_map<std::string, int>::iterator eventType = reqMap.find(*event);
+          if (eventType == reqMap.end()) // Recognized event type?
+          {
+              json error =
+              {
+                  {"event", *event},
+                  {"success", false},
+                  {"error",{
+                      {"code", "EVENT_ERROR"},
+                      {"msg", "Unrecognized event type"}
+                  }}
+              };
+              conn.send_text(error.dump());
+              return;
+          }
+
           // Switch based on event type
-          switch (reqMap.at(*event))
+          switch (eventType->second)
           {
           case 0: // Player joins room 
             {
@@ -177,8 +194,18 @@ int main()
                 room.AddPlayer(&conn, name);
                 userConnections.insert({&conn, &room});
                 int playerId = userPlayers[&conn]->getId(); // Could use room.getId() here :/
+                // Generate list of all currently connected players
+                json playersJson;
+                auto listPlayers = room.getPlayers();
+                for (Player& player : listPlayers)
+                {
+                    playersJson.push_back(
+                        {
+                            {"id", player.getId()},
+                            {"name", player.getName()}
+                        });   
+                }
                 // Return success message
-                json players;
                 json success =
                 {
                     {"event", "join_response"},
@@ -186,19 +213,9 @@ int main()
                     {"data",{
                         {"id", playerId},
                         {"name", name},
+                        {"players", playersJson}
                     }}
                 };
-                // Generate list of all currently connected players
-                auto listPlayers = room.getPlayers();
-                for (Player& player : listPlayers)
-                {
-                    players.push_back(
-                        {
-                            {"id", player.getId()},
-                            {"name", player.getName()}
-                        });   
-                }
-                success["data"]["players"] = players;
                 conn.send_text(success.dump());
                 // Inform other players of the connection
                 json report =
@@ -243,7 +260,22 @@ int main()
 
                 // Continue if everything is fine
                 Player& readier = *userPlayer->second;
-                userConnections[&conn]->getReadyStates().at(readier.getId()) = true;
+                Room& room = *userConnections[&conn];
+                if (room.gameOn()) // If game has already started
+                {
+                    json error =
+                    {
+                        {"event", "start_response"},
+                        {"success", false},
+                        {"error",{
+                            {"code", "LATE"},
+                            {"msg", "The game has already started"}
+                        }}
+                    };
+                    conn.send_text(error.dump());
+                    return;
+                }
+                room.getReadyStates().at(readier.getId()) = true;
                 json success =
                 {
                     {"event", "start_response"},
@@ -251,7 +283,6 @@ int main()
                 };
                 conn.send_text(success.dump());
                 // Tell other players
-                Room& room = *userConnections[&conn];
                 json report =
                 {
                     {"event", "player_readied"},
@@ -269,12 +300,21 @@ int main()
                         player.sendMessage(report.dump());
                     }
                 }
-
+                // Check if game should start
+                for (bool b : room.getReadyStates())
+                {
+                    if (!b) // If a player is not ready, skip to end and don't start game
+                        goto END;
+                }
+                // All players are ready, start game
+                room.startGame();
+                END:
                 break;
             }
           default:
             {
-                break;
+              CROW_LOG_ERROR << "Event type switch statement default reached";
+              break;
             }
           }
 
